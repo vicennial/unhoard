@@ -1,0 +1,13 @@
+__pycache__/
+*.py[cod]
+*.egg-info/
+build/
+dist/
+.venv/
+.env
+*.sqlite3
+*.sqlite3-*
+!src/unhoard_ext/dist/
+
+# Design-tool scratch (review captures can show real bookmarks)
+.impeccable/

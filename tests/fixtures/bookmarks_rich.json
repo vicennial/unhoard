@@ -1,0 +1,41 @@
+{
+  "data": [
+    {"id": "205", "text": "Thread on build caching &amp; sharding\n\nWrite-up: https://t.co/AAA111 and the chart https://t.co/PIC222 https://t.co/PIC333",
+     "author_id": "u1", "created_at": "2026-10-01T10:00:00.000Z",
+     "attachments": {"media_keys": ["m_photo2", "m_photo1"]},
+     "public_metrics": {"retweet_count": 12, "reply_count": 3, "like_count": 99, "quote_count": 1, "bookmark_count": 40, "impression_count": 5000},
+     "entities": {"urls": [
+       {"url": "https://t.co/AAA111", "expanded_url": "https://example.invalid/cache-writeup", "display_url": "example.invalid/cache-writeup"},
+       {"url": "https://t.co/PIC222", "expanded_url": "https://x.com/ada.example/status/205/photo/1", "display_url": "pic.x.com/PIC222", "media_key": "m_photo1"},
+       {"url": "https://t.co/PIC333", "expanded_url": "https://x.com/ada.example/status/205/photo/2", "display_url": "pic.x.com/PIC333", "media_key": "m_photo2"}]}},
+    {"id": "204", "text": "Truncated text... https://t.co/LONG",
+     "author_id": "u2", "created_at": "2026-09-30T09:00:00.000Z",
+     "attachments": {"media_keys": ["m_video"]},
+     "note_tweet": {"text": "Long form: see https://t.co/NOTE1 for the demo.\nSecond line &lt;ok&gt;. https://t.co/VID444",
+                    "entities": {"urls": [
+                      {"url": "https://t.co/NOTE1", "expanded_url": "https://example.invalid/demo", "display_url": "example.invalid/demo"},
+                      {"url": "https://t.co/VID444", "expanded_url": "https://x.com/grace.example/status/204/video/1", "display_url": "pic.x.com/VID444", "media_key": "m_video"}]}},
+     "public_metrics": {"retweet_count": 1, "reply_count": 0, "like_count": 5, "quote_count": 0}},
+    {"id": "203", "text": "No extras at all", "author_id": "u1", "created_at": "2026-09-29T08:00:00.000Z"}
+  ],
+  "includes": {
+    "users": [
+      {"id": "u1", "username": "ada.example", "name": "Ada Example", "verified": true,
+       "profile_image_url": "https://pbs.twimg.com/profile_images/111/ada_normal.jpg"},
+      {"id": "u2", "username": "grace.example", "name": "Grace Sample", "verified": false,
+       "profile_image_url": "http://insecure.example.invalid/grace_normal.png"}
+    ],
+    "media": [
+      {"media_key": "m_photo1", "type": "photo", "url": "https://pbs.twimg.com/media/one.jpg", "width": 1200, "height": 675, "alt_text": "chart one"},
+      {"media_key": "m_photo2", "type": "photo", "url": "https://pbs.twimg.com/media/two.jpg", "width": 800, "height": 800},
+      {"media_key": "m_video", "type": "video", "preview_image_url": "https://pbs.twimg.com/ext_tw_video_thumb/9/img.jpg",
+       "width": 1280, "height": 720, "duration_ms": 31000,
+       "variants": [
+         {"content_type": "application/x-mpegURL", "url": "https://video.twimg.com/ext_tw_video/9/pl/master.m3u8"},
+         {"bit_rate": 256000, "content_type": "video/mp4", "url": "https://video.twimg.com/ext_tw_video/9/vid/320x180/low.mp4"},
+         {"bit_rate": 2176000, "content_type": "video/mp4", "url": "https://video.twimg.com/ext_tw_video/9/vid/1280x720/high.mp4"},
+         {"bit_rate": 832000, "content_type": "video/mp4", "url": "https://video.twimg.com/ext_tw_video/9/vid/640x360/mid.mp4"}]}
+    ]
+  },
+  "meta": {"result_count": 3}
+}

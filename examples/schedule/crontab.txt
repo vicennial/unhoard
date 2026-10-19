@@ -1,0 +1,16 @@
+# Plain cron, nothing else needed. Edit with: crontab -e
+#
+# Cron runs with a minimal environment and often a different HOME than your shell,
+# so everything is explicit: the data dir and config path (UNHOARD_HOME /
+# UNHOARD_CONFIG) and the X token, which lives in a private env file
+# (chmod 600) instead of in the crontab or the config.
+#
+#   ~/.config/unhoard/env   (mode 600)
+#   export X_BEARER_TOKEN="<your OAuth 2.0 user token with bookmark.read>"
+#   export UNHOARD_HOME="$HOME/.local/share/unhoard"
+#   export UNHOARD_CONFIG="$HOME/.config/unhoard/config.toml"
+#   export PATH="$HOME/.local/bin:/usr/local/bin:/usr/bin:/bin"
+#
+# Every 6 hours: fetch new bookmarks, then let your agent write cards for up to 10 of them.
+# Find the absolute path of the program with: command -v unhoard
+0 */6 * * *  . "$HOME/.config/unhoard/env" && unhoard sync && unhoard enrich --limit 10 >> "$HOME/.local/share/unhoard/cron.log" 2>&1

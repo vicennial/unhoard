@@ -1,0 +1,17 @@
+{
+  "data": [
+    {"id": "102", "text": "Older post", "author_id": "u1", "created_at": "2026-09-20T08:00:00.000Z"},
+    {"id": "101", "text": "Oldest post with a video", "author_id": "u2", "created_at": "2026-09-10T08:00:00.000Z",
+     "attachments": {"media_keys": ["m2"]}}
+  ],
+  "includes": {
+    "users": [
+      {"id": "u1", "username": "ada.example", "name": "Ada Example"},
+      {"id": "u2", "username": "grace.example", "name": "Grace Sample"}
+    ],
+    "media": [
+      {"media_key": "m2", "type": "video", "preview_image_url": "http://insecure.example.invalid/prev.jpg"}
+    ]
+  },
+  "meta": {"result_count": 2}
+}

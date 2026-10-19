@@ -1,0 +1,57 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<meta name="color-scheme" content="light">
+<title>Bookmarks</title>
+<link rel="stylesheet" href="/static/app.css">
+</head>
+<body>
+<header class="console">
+  <div class="console-in">
+    <h1 class="mark">Bookmarks</h1>
+    <dl class="readouts" id="readouts" aria-label="Queue counts"></dl>
+    <button type="button" class="readout setup-lamp" id="setup-lamp" aria-controls="setup" aria-expanded="false" hidden>
+      <span class="dot" aria-hidden="true"></span><span class="lamp-k">Setup</span><span class="lamp-v" id="setup-count"></span>
+    </button>
+    <div class="switch" id="filters" role="group" aria-label="Filter by label"></div>
+  </div>
+  <p id="notice" class="annunciator" role="status" aria-live="polite" hidden></p>
+  <p id="copy-live" class="sr" role="status" aria-live="polite"></p>
+</header>
+<main class="room">
+  <section class="brief-out" id="brief-sect" aria-labelledby="brief-title" hidden>
+    <div class="pf-head">
+      <h2 class="pf-title" id="brief-title">Brief</h2>
+      <span class="pf-count" id="brief-for"></span>
+      <button type="button" class="pf-copy" id="brief-copy" aria-label="Copy the brief">Copy</button>
+      <button type="button" class="pf-hide" id="brief-close">Close</button>
+    </div>
+    <pre class="brief-text" id="brief-text" tabindex="0"></pre>
+  </section>
+  <section aria-labelledby="poll-title">
+    <div class="preflight" id="setup" role="region" aria-labelledby="setup-title" hidden>
+      <div class="pf-head">
+        <h2 class="pf-title" id="setup-title">Pre-flight checklist</h2>
+        <span class="pf-count" id="setup-ready"></span>
+        <button type="button" class="pf-hide" id="setup-hide">Hide</button>
+      </div>
+      <ul class="pf-list" id="setup-list"></ul>
+    </div>
+    <h2 class="legend" id="poll-title">Today&rsquo;s poll</h2>
+    <div id="picks" class="stations"></div>
+  </section>
+  <section aria-labelledby="launched-title" id="launched-sect" hidden>
+    <h2 class="legend" id="launched-title">Launched</h2>
+    <div id="launched" class="telemetry board" role="list"></div>
+  </section>
+  <section aria-labelledby="waiting-title" id="waiting-sect">
+    <h2 class="legend" id="waiting-title">Waiting</h2>
+    <div id="waiting" class="telemetry" role="list"></div>
+  </section>
+  <p id="foot" class="foot-note"></p>
+</main>
+<script src="/static/app.js" defer></script>
+</body>
+</html>

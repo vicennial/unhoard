@@ -1,0 +1,52 @@
+[build-system]
+requires = ["setuptools>=68"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "unhoard"
+version = "0.1.0"
+description = "Your X bookmarks aren't a graveyard anymore: your agent reads each one, works out why you saved it, and writes a task you start with one click."
+readme = "README.md"
+requires-python = ">=3.11"
+license = "Apache-2.0"
+license-files = ["LICENSE"]
+authors = [{ name = "vicennial" }]
+dependencies = []
+keywords = ["x", "twitter", "bookmarks", "agents", "ai-agents", "omnigent", "claude-code", "codex", "productivity", "cli"]
+classifiers = [
+  "Development Status :: 3 - Alpha",
+  "Environment :: Console",
+  "Environment :: Web Environment",
+  "Intended Audience :: Developers",
+  "Intended Audience :: End Users/Desktop",
+  "Operating System :: MacOS",
+  "Operating System :: POSIX :: Linux",
+  "Programming Language :: Python :: 3",
+  "Programming Language :: Python :: 3 :: Only",
+  "Programming Language :: Python :: 3.11",
+  "Programming Language :: Python :: 3.12",
+  "Programming Language :: Python :: 3.13",
+  "Programming Language :: Python :: 3.14",
+  "Topic :: Utilities",
+]
+
+[project.urls]
+Homepage = "https://github.com/vicennial/unhoard"
+Repository = "https://github.com/vicennial/unhoard"
+Issues = "https://github.com/vicennial/unhoard/issues"
+
+[project.scripts]
+unhoard = "unhoard.cli:main"
+
+# Omnigent discovers extensions through this entry-point group (V1 extension API). The browser
+# bundle must live in the entry point's top-level import package, hence the separate
+# unhoard_ext package: it is the only code that imports omnigent, so the core stays stdlib-only.
+[project.entry-points."omnigent.extensions"]
+unhoard = "unhoard_ext.plugin:get_manifest"
+
+[tool.setuptools.packages.find]
+where = ["src"]
+
+[tool.setuptools.package-data]
+unhoard = ["web/*", "demo_media/*.jpg"]
+unhoard_ext = ["dist/*"]
