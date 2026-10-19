@@ -2,8 +2,8 @@
 
 **Made for [Omnigent](https://github.com/omnigent-ai/omnigent). Works with any agent.**
 
-Your X bookmarks aren't a graveyard anymore. Your agent reads every bookmark, works out why you saved it, and writes
-a task you can start with one click.
+Your X (Twitter) bookmarks aren't a graveyard anymore. Your AI agent reads every bookmark, works out why you saved it,
+and writes a task you can start with one click.
 
 unhoard syncs your X bookmarks into a local SQLite file, has your own agent (Claude Code, Codex, or any command that
 reads stdin and prints JSON) write "why you probably saved this" plus up to a few concrete tasks per bookmark, and shows
@@ -12,13 +12,14 @@ day. Nothing starts until you press Go.
 
 [Quick start](#quick-start) · [How it works](#how-it-works) · [Why Omnigent first](#why-omnigent-first) ·
 [X API access](#x-api-access) · [Commands](#commands) · [Privacy](#privacy-and-safety) ·
+[Compared with other bookmark tools](#how-unhoard-compares-with-other-x-bookmark-tools) · [FAQ](#faq) ·
 [Phone](https://github.com/vicennial/unhoard/blob/main/docs/phone.md) · [Card API](https://github.com/vicennial/unhoard/blob/main/docs/card-api.md) · [Agent commands](https://github.com/vicennial/unhoard/blob/main/docs/agent-commands.md)
 
 ![unhoard: the card page turns saved posts into tasks, and Go starts one](https://raw.githubusercontent.com/vicennial/unhoard/main/docs/images/demo.gif)
 
 > Status: **v0.1, experimental.** Apache-2.0 licensed. Python 3.11 or newer, no dependencies.
 
-## Why
+## What to do with your X bookmarks
 
 Saving a post takes one tap; acting on it takes a decision you never get around to. Bookmarks pile up because the
 "why" is lost the day after. unhoard keeps the part that is cheap for a person (deciding) and hands the expensive part
@@ -142,6 +143,24 @@ A **Bookmarks** entry in the Omnigent sidebar is planned. It needs Omnigent exte
 yet: starting sessions from an extension page, and reading a local data source. Until then, use the card page.
 `src/unhoard_ext/` holds a scaffold that only explains this.
 
+## How unhoard compares with other X bookmark tools
+
+Other good open-source tools mostly *organize* your bookmarks: they archive, tag or search them. unhoard is for
+*acting* on them: a few tasks a day, and your agent does the work when you press Go. As of October 2026, from each
+project's own README:
+
+| Tool | What it does with your bookmarks | How it reads X | Runs on |
+| --- | --- | --- | --- |
+| **unhoard** | Your agent writes why you saved each one and a task; you answer a few cards a day; Go starts the task in Omnigent or any agent CLI | Official X API (OAuth 2.0, your own app) | Python, no dependencies |
+| [Siftly](https://github.com/viperrcrypto/Siftly) | Searchable, categorized knowledge base with a mindmap view | Bookmarklet or console-script import | Node web app |
+| [Smaug](https://github.com/alexknowshtml/smaug) | Archives bookmarks to markdown, categorized by Claude Code or OpenCode | bird CLI with your browser session cookies | Node |
+| [Field Theory CLI](https://github.com/afar1/fieldtheory-cli) | Local bookmark library your agent can search through a skill | Browser session sync or OAuth API | Node, with a Mac app |
+| [birdclaw](https://github.com/steipete/birdclaw) | Your whole X history (archive import) in a local web app, CLI and read-only MCP server | X archive file plus cached live reads | Node |
+| [x-bookmarks](https://github.com/sharbelxyz/x-bookmarks) | OpenClaw skill: your agent fetches bookmarks and proposes actions in chat | bird CLI or X API v2 | OpenClaw skill |
+
+Choose unhoard if you want bookmarks to turn into finished work, with nothing starting until you press Go. Choose an
+archive tool if you mainly want to search what you saved. They combine fine: unhoard only reads.
+
 ## X API access
 
 You need your own X API access and your own X developer app (OAuth 2.0 enabled; "Native App" is fine). Easiest: set the
@@ -156,6 +175,9 @@ X does not return *when* you bookmarked a post, so the page shows when the post 
 API, `sync --from-file` accepts a saved response in the same JSON shape.
 
 ## Paste this into Claude Code or Codex to install and configure it
+
+Or install the agent skill, which teaches Claude Code, Codex and other agents to set up and run unhoard for you:
+`npx skills add vicennial/unhoard` (the skill is in [skills/unhoard](https://github.com/vicennial/unhoard/tree/main/skills/unhoard)).
 
 ```text
 Install and configure unhoard from this repository for me.
@@ -282,6 +304,44 @@ src/unhoard/
 src/unhoard_ext/  Omnigent extension scaffold (manifest + a page that explains what is missing)
 examples/schedule/         cron, Claude Code /loop, Hermes cron
 ```
+
+## FAQ
+
+### What should I do with my X (Twitter) bookmarks?
+
+Act on a few and let the rest go. unhoard picks three a day, says why you probably saved each one, and proposes a
+task your agent can do. You press Go, Later or Skip. Later brings a card back in a few days; Skip drops it for good.
+
+### Can Claude Code or Codex act on my Twitter bookmarks?
+
+Yes. `unhoard enrich` uses Claude Code or Codex to write the why and the tasks, and Go can start the task in any agent
+CLI through the `command` adapter, or as an Omnigent session. The [agent skill](https://github.com/vicennial/unhoard/tree/main/skills/unhoard)
+lets your agent install and run unhoard for you.
+
+### Does unhoard scrape X or use my browser cookies?
+
+No. It uses the official X API v2 with your own developer app and an OAuth 2.0 login with the `bookmark.read`
+scope (read-only). See [X API access](#x-api-access).
+
+### How do I export my Twitter bookmarks?
+
+`unhoard sync` copies them into a local SQLite file you own (`bookmarks.sqlite3` in the data directory; `unhoard status`
+shows the path). `sync --from-file` also accepts a saved X API response.
+
+### Do I need Omnigent?
+
+No. Omnigent gives each task a session you can watch and resume, but any agent CLI works through the `command`
+adapter, and with nothing set up Go shows the brief so you can paste it anywhere.
+
+### Will an agent run things without asking me?
+
+No. Enrichment only reads and writes cards. Nothing starts until you press Go, and the agent that reads the
+untrusted post never sees your files. See [Privacy and safety](#privacy-and-safety).
+
+### What does it cost?
+
+unhoard is free and Apache-2.0 licensed. Reading bookmarks through the X API typically needs a paid X API plan, and
+enrichment uses your own agent's tokens (`enrich --limit 5` first to see the cost).
 
 ## Development
 

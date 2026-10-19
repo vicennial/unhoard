@@ -4,15 +4,17 @@ build-backend = "setuptools.build_meta"
 
 [project]
 name = "unhoard"
-version = "0.1.0"
-description = "Your X bookmarks aren't a graveyard anymore: your agent reads each one, works out why you saved it, and writes a task you start with one click."
+version = "0.1.1"
+description = "Your X (Twitter) bookmarks aren't a graveyard anymore: your AI agent (Claude Code, Codex, Omnigent or any CLI) reads each one, works out why you saved it, and writes a task you start with one click."
 readme = "README.md"
 requires-python = ">=3.11"
 license = "Apache-2.0"
 license-files = ["LICENSE"]
 authors = [{ name = "vicennial" }]
 dependencies = []
-keywords = ["x", "twitter", "bookmarks", "agents", "ai-agents", "omnigent", "claude-code", "codex", "productivity", "cli"]
+keywords = ["x", "twitter", "bookmarks", "x-bookmarks", "twitter-bookmarks", "bookmark-manager", "x-api", "twitter-api",
+  "read-later", "agents", "ai-agents", "agent-skills", "omnigent", "claude-code", "codex", "local-first", "self-hosted",
+  "productivity", "cli"]
 classifiers = [
   "Development Status :: 3 - Alpha",
   "Environment :: Console",
@@ -27,11 +29,13 @@ classifiers = [
   "Programming Language :: Python :: 3.12",
   "Programming Language :: Python :: 3.13",
   "Programming Language :: Python :: 3.14",
+  "Topic :: Internet",
   "Topic :: Utilities",
 ]
 
 [project.urls]
 Homepage = "https://github.com/vicennial/unhoard"
+Documentation = "https://github.com/vicennial/unhoard#readme"
 Repository = "https://github.com/vicennial/unhoard"
 Issues = "https://github.com/vicennial/unhoard/issues"
 
