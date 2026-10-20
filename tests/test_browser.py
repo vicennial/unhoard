@@ -49,8 +49,15 @@ class PageScriptTests(unittest.TestCase):
             self.assertIn(needle, line)
         self.assertIn("codePointAt(0)", self.js)  # astral characters get their full code point in the marker
 
+    def test_urls_are_relative_so_the_page_works_under_a_path_prefix(self):
+        # A reverse proxy may mount the page at /some/prefix/; absolute /api or /static URLs would escape it.
+        html = (WEB / "index.html").read_text(encoding="utf-8")
+        self.assertNotIn('"/static/', html)
+        self.assertNotIn('api("/', self.js)
+        self.assertNotIn('fetch("/', self.js)
+
     def test_the_checklist_is_text_content_and_storage_is_guarded(self):
-        self.assertIn("/api/setup", self.js)
+        self.assertIn('api("api/setup")', self.js)
         self.assertIn("DISMISS_KEY", self.js)
         # every localStorage access sits inside a try block
         block = self.js[self.js.index("function dismissed"):self.js.index("function copyCommand")]

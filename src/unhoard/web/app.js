@@ -144,12 +144,12 @@
   }
 
   function loadSetup() {
-    return api("/api/setup").then(function (d) { state.setup = d; }, function () { state.setup = null; }).then(renderSetup);
+    return api("api/setup").then(function (d) { state.setup = d; }, function () { state.setup = null; }).then(renderSetup);
   }
 
   function load(more) {
     if (more) state.more = true; // keep showing bonus cards for this visit
-    return api("/api/cards" + (state.more ? "?more=1" : "")).then(function (d) {
+    return api("api/cards" + (state.more ? "?more=1" : "")).then(function (d) {
       state.data = d;
       var ids = d.picks.concat(d.waiting).map(function (c) { return c.action_id; });
       if (ids.indexOf(state.open) < 0) state.open = null;
@@ -175,7 +175,7 @@
     // Tell the server which target the button promised. If Omnigent came or went since this page loaded, the
     // server refuses (409) instead of doing something the button did not say.
     if (decision === "go" && launchInfo().target) request.expect_target = launchInfo().target;
-    api("/api/cards/" + card.action_id + "/decide", {
+    api("api/cards/" + card.action_id + "/decide", {
       method: "POST", headers: { "Content-Type": "application/json" },
       body: JSON.stringify(request)
     }).then(function (r) {
@@ -231,7 +231,7 @@
   // if what Go does or the set of cards changed, so a half-typed note is not thrown away.
   function refreshOnReturn() {
     if (document.visibilityState !== "visible" || state.busy || !state.data) return;
-    api("/api/cards" + (state.more ? "?more=1" : "")).then(function (d) {
+    api("api/cards" + (state.more ? "?more=1" : "")).then(function (d) {
       function key(x) {
         return JSON.stringify([x.launch, x.picks.concat(x.waiting).map(function (c) { return c.action_id; })]);
       }
