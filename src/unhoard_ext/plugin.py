@@ -22,7 +22,7 @@ def get_manifest() -> ExtensionManifest:
         id=EXTENSION_ID,
         display_name="Bookmarks",
         distribution="unhoard",  # must match the installed package metadata
-        version="0.1.1",
+        version="0.1.2",
         requires_omnigent=">=0.11,<1",
         extension_api=EXTENSION_API_VERSION,
         entrypoints=ExtensionEntrypoints(browser="dist/extension.js", browser_css="dist/extension.css"),

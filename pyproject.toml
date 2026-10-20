@@ -4,7 +4,7 @@ build-backend = "setuptools.build_meta"
 
 [project]
 name = "unhoard"
-version = "0.1.1"
+version = "0.1.2"
 description = "Your X (Twitter) bookmarks aren't a graveyard anymore: your AI agent (Claude Code, Codex, Omnigent or any CLI) reads each one, works out why you saved it, and writes a task you start with one click."
 readme = "README.md"
 requires-python = ">=3.11"
