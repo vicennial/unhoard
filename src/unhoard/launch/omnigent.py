@@ -13,6 +13,9 @@ from .. import netsafe, omnigent_detect
 from .brief import render_brief
 
 
+DEFAULT_WORKSPACE = "unhoard-tasks"  # in the home folder, when the host is this machine
+
+
 def user_message(text: str) -> dict:
     return {"type": "message", "data": {"role": "user", "content": [{"type": "input_text", "text": text}]}}
 
@@ -50,8 +53,10 @@ class OmnigentLauncher:
             with opener.open(req, timeout=self.timeout) as resp:
                 return json.loads(resp.read() or b"{}")
         except urllib.error.HTTPError as exc:
-            raise LaunchError(f"Omnigent returned HTTP {exc.code}: {exc.read()[:300].decode('utf-8', 'replace')}") from exc
-        except (urllib.error.URLError, TimeoutError, json.JSONDecodeError, http.client.HTTPException) as exc:
+            err = LaunchError(f"Omnigent returned HTTP {exc.code}: {exc.read()[:300].decode('utf-8', 'replace')}")
+            err.status = exc.code
+            raise err from exc
+        except (OSError, json.JSONDecodeError, http.client.HTTPException) as exc:  # OSError covers URLError and resets
             raise LaunchError(f"could not reach Omnigent at {api}: {exc}") from exc
 
     def project_id(self, api: str) -> str | None:
@@ -79,7 +84,9 @@ class OmnigentLauncher:
         """Bind the session to a host when none is configured; a session without one never runs.
 
         One online host is used as is. With several, the one named like this machine is used, but only for a
-        loopback server (the host is then this machine). The workspace defaults to the home folder.
+        loopback server. Sandbox hosts are left out, as Omnigent's own pickers do. The workspace defaults to
+        ~/unhoard-tasks only when the host is this machine; the agent reads untrusted post text, so it does not get
+        your whole home folder unless you set ``workspace`` to it.
         """
         from . import LaunchError
         if body.get("host_id"):
@@ -87,20 +94,26 @@ class OmnigentLauncher:
         try:
             listed = self._call(api, "GET", "/v1/hosts").get("hosts")
         except LaunchError as exc:
-            if "HTTP 404" in str(exc):  # a server without hosts: it runs the session itself
+            if getattr(exc, "status", None) == 404:  # a server without hosts: it runs the session itself
                 return
             raise
-        online = [h for h in listed or [] if isinstance(h, dict) and h.get("status") == "online" and h.get("host_id")]
+        online = [h for h in listed or [] if isinstance(h, dict) and h.get("status") == "online" and h.get("host_id")
+                  and not h.get("sandbox_provider")]
         if len(online) > 1 and omnigent_detect.is_loopback(api):
             online = [h for h in online if h.get("name") == socket.gethostname()]
         if len(online) != 1:
-            raise LaunchError(f"Omnigent has {len(online) or 'no'} matching hosts online: set [omnigent] host_id and "
-                              f"workspace (the ids are at {api}/v1/hosts)")
-        body["host_id"] = online[0]["host_id"]
+            why = "no host is online" if not listed else f"{len(online) or 'none'} of its hosts could be the one"
+            raise LaunchError(f"Omnigent cannot pick a host ({why}): set [omnigent] host_id and workspace "
+                              f"(the ids are at {api}/v1/hosts)")
+        host = online[0]
+        body["host_id"] = host["host_id"]
         if not body.get("workspace"):
-            if not omnigent_detect.is_loopback(api):
-                raise LaunchError("[omnigent] workspace is needed for a remote host: an absolute path on that host")
-            body["workspace"] = str(Path.home())
+            if not (omnigent_detect.is_loopback(api) and host.get("name") == socket.gethostname()):
+                raise LaunchError(f"[omnigent] workspace is needed: host {host.get('name') or host['host_id']} is not "
+                                  "this machine, so give an absolute path on it")
+            folder = Path.home() / DEFAULT_WORKSPACE
+            folder.mkdir(exist_ok=True)
+            body["workspace"] = str(folder)
 
     def __call__(self, card: dict, note: str = "") -> dict:
         from . import LaunchError

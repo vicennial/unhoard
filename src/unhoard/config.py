@@ -351,7 +351,7 @@ agent_id = ""
 project = "X Bookmarks"
 # The machine the session runs on. Empty: the one online host, or with several the one named like this machine.
 # host_id = ""        # curl {{api}}/v1/hosts
-# workspace = ""      # absolute path on that host; empty: your home folder (needed for a remote server)
+# workspace = ""      # absolute path on that host; empty: ~/unhoard-tasks when the host is this machine
 # harness = ""        # for example "claude-sdk" (overrides the agent default)
 # model = ""
 # reasoning_effort = ""

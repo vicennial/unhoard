@@ -60,6 +60,8 @@ jobs:
           fi
       - if: steps.pypi.outputs.published != 'true'
         uses: pypa/gh-action-pypi-publish@release/v1
+        with:
+          skip-existing: true  # also safe when the check above could not reach PyPI
 
   github-release:
     needs: [build, pypi]

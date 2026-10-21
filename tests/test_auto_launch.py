@@ -25,7 +25,7 @@ def omnigent(handler, body):
     if handler.path == "/v1/projects":
         return 200, {"data": [{"id": "proj_1", "name": "X Bookmarks"}]}
     if handler.path == "/v1/hosts":
-        return 200, {"hosts": [{"host_id": "host_1", "name": "this-box", "status": "online"}]}
+        return 200, {"hosts": [{"host_id": "host_1", "name": "a-remote.invalid", "status": "online"}]}
     if handler.path == "/v1/sessions":
         return 200, {"session_id": "sess_1"}
     if handler.path == "/v1/sessions/sess_1/events":
@@ -86,7 +86,7 @@ class ProbeTests(unittest.TestCase):
 
 class AutoLauncherTests(helpers.TempCase):
     def cfg(self, base, agent="ag_1", **launch_section):
-        return Config({"launch": launch_section, "omnigent": {"api": base, "agent_id": agent}}, self.paths, env={})
+        return Config({"launch": launch_section, "omnigent": {"api": base, "agent_id": agent, "workspace": "/w"}}, self.paths, env={})
 
     def test_go_starts_a_session_when_omnigent_answers_and_shows_the_brief_when_it_does_not(self):
         with mock.patch.object(launch, "probe_omnigent", helpers.REAL_PROBE):
@@ -206,7 +206,7 @@ class PageApiTests(helpers.TempCase):
 
     def test_down_at_load_then_up_at_go_is_refused_not_started(self):
         with helpers.fake_http(omnigent) as (base, reqs):
-            cfg = Config({"omnigent": {"api": base, "agent_id": "ag_1"}}, self.paths, env={})
+            cfg = Config({"omnigent": {"api": base, "agent_id": "ag_1", "workspace": "/w"}}, self.paths, env={})
             with mock.patch.object(launch, "probe_omnigent", helpers.REAL_PROBE):
                 port = self.serve(cfg, real_launcher=True)
                 with mock.patch.object(launch, "probe_omnigent", return_value=False):
@@ -260,7 +260,7 @@ class PageApiTests(helpers.TempCase):
 
     def test_an_omnigent_go_reports_the_target_and_no_brief(self):
         with helpers.fake_http(omnigent) as (base, reqs):
-            cfg = Config({"omnigent": {"api": base, "agent_id": "ag_1"}}, self.paths, env={})
+            cfg = Config({"omnigent": {"api": base, "agent_id": "ag_1", "workspace": "/w"}}, self.paths, env={})
             with mock.patch.object(launch, "probe_omnigent", helpers.REAL_PROBE):
                 port = self.serve(cfg, real_launcher=True)
                 code, body = self.go(port, expect="omnigent")

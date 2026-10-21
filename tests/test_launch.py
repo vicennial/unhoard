@@ -1,10 +1,14 @@
 import helpers
 import io
 import json
+import os
+import socket
+import tempfile
 import sys
 import time
 import unittest
 import urllib.error
+from pathlib import Path
 
 from unhoard.config import Config
 from unhoard.launch import LaunchError, make_launcher, render_brief
@@ -96,7 +100,7 @@ class BriefTests(unittest.TestCase):
         self.assertIn("unknown", brief)
 
 
-HOST = {"host_id": "host_1", "name": "this-box", "status": "online"}
+HOST = {"host_id": "host_1", "name": socket.gethostname(), "status": "online"}  # this machine
 
 
 def with_hosts(responder, hosts=(HOST,)):
@@ -111,6 +115,16 @@ def with_hosts(responder, hosts=(HOST,)):
 
 
 class OmnigentLauncherTests(unittest.TestCase):
+    def setUp(self):
+        # the default workspace is made in the home folder: a scratch one here
+        from unittest import mock
+        home = tempfile.TemporaryDirectory()
+        self.addCleanup(home.cleanup)
+        self.home = Path(home.name)
+        patcher = mock.patch.dict(os.environ, {"HOME": home.name})
+        patcher.start()
+        self.addCleanup(patcher.stop)
+
     def launcher(self, base, **over):
         return OmnigentLauncher({"api": base, "agent_id": "ag_test", **over}, timeout=5)
 
@@ -135,14 +149,30 @@ class OmnigentLauncherTests(unittest.TestCase):
         self.assertIn("my note", text["text"])
         self.assertIn("untrusted", text["text"])
 
-    def test_without_a_host_id_the_one_online_host_and_the_home_folder_are_used(self):
-        from pathlib import Path
-        hosts = (HOST, {"host_id": "host_off", "name": "old", "status": "offline"})
+    def test_without_a_host_id_this_machine_and_a_tasks_folder_in_home_are_used(self):
+        hosts = (HOST, {"host_id": "host_off", "name": "old", "status": "offline"},
+                 {"host_id": "host_box", "name": "sandbox", "status": "online", "sandbox_provider": "docker"})
         with helpers.fake_http(with_hosts(lambda h, b: (200, {"session_id": "s"}), hosts)) as (base, reqs):
             self.launcher(base)(CARD, "")
         self.assertEqual(reqs[0]["path"], "/v1/hosts")
         body = json.loads(reqs[1]["body"])
-        self.assertEqual((body["host_id"], body["workspace"]), ("host_1", str(Path.home())))
+        self.assertEqual((body["host_id"], body["workspace"]), ("host_1", str(self.home / "unhoard-tasks")))
+        self.assertTrue((self.home / "unhoard-tasks").is_dir())  # not the whole home folder: the brief is untrusted
+
+    def test_a_host_that_is_not_this_machine_needs_a_workspace(self):
+        other = ({"host_id": "host_x", "name": "other.invalid", "status": "online"},)
+        with helpers.fake_http(with_hosts(lambda h, b: (200, {"session_id": "s"}), other)) as (base, reqs):
+            with self.assertRaisesRegex(LaunchError, "workspace is needed"):
+                self.launcher(base)(CARD, "")
+            self.launcher(base, workspace="/srv/w")(CARD, "")
+        self.assertEqual(json.loads(reqs[-2]["body"])["workspace"], "/srv/w")
+        self.assertFalse((self.home / "unhoard-tasks").exists())
+
+    def test_a_404_in_a_body_is_not_a_missing_hosts_route(self):
+        with helpers.fake_http(lambda h, b: (500, {"detail": "upstream said HTTP 404"})) as (base, reqs):
+            with self.assertRaisesRegex(LaunchError, "500"):
+                self.launcher(base)(CARD, "")
+        self.assertEqual([r["path"] for r in reqs], ["/v1/hosts"])
 
     def test_with_several_online_hosts_the_one_named_like_this_machine_is_used(self):
         import socket
@@ -158,7 +188,7 @@ class OmnigentLauncherTests(unittest.TestCase):
                {"host_id": "host_b", "name": "b.invalid", "status": "online"})
         for hosts in ((), two):
             with helpers.fake_http(with_hosts(lambda h, b: (200, {"session_id": "s"}), hosts)) as (base, reqs):
-                with self.assertRaisesRegex(LaunchError, r"host_id"):
+                with self.assertRaisesRegex(LaunchError, r"cannot pick a host.*host_id"):
                     self.launcher(base)(CARD, "")
             self.assertEqual([r["path"] for r in reqs], ["/v1/hosts"])
 

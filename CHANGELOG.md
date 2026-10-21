@@ -19,9 +19,10 @@ All notable changes to unhoard are listed here. The format follows
 
 ### Changed
 - Without `[omnigent] host_id`, Go uses the one online Omnigent host, or with several the one named like this
-  machine. `workspace` defaults to your home folder. Set both to choose another machine or folder.
+  machine. `workspace` defaults to `~/unhoard-tasks` when that host is this machine. Set both to choose another
+  machine or folder.
 - The card page can now also be served by a reverse proxy under a path such as `/bookmarks/` (it uses relative
-  URLs). Opening it directly works as before.
+  URLs; the proxy must send `/bookmarks` on to `/bookmarks/`). Opening it directly works as before.
 
 ## [0.1.1] - 2026-10-19
 
