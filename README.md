@@ -97,9 +97,10 @@ Set `[launch] adapter` in `config.toml`. The default is `auto`:
 - `auto` (default): an Omnigent session when `[omnigent] agent_id` is set **and** the Omnigent API answers on this machine
   when you press the button; otherwise it shows the brief. `unhoard setup` and `unhoard agents` find your local Omnigent
   and save the agent you pick. An explicit adapter below always wins.
-- `omnigent`: always create a session on your Omnigent server with the task brief as the first message
-  (`POST {api}/v1/sessions`). Set `[omnigent] agent_id` to a registered agent (`unhoard agents` lists them;
-  `host_id`, `workspace`, `harness`, `model` and `reasoning_effort` are optional). Sessions go into the Omnigent
+- `omnigent`: always create a session on your Omnigent server (`POST {api}/v1/sessions`) and send the task brief as
+  its first message. Set `[omnigent] agent_id` to a registered agent (`unhoard agents` lists them;
+  `host_id`, `workspace`, `harness`, `model` and `reasoning_effort` are optional). Without `host_id` the session runs
+  on the one online host, or with several on the one named like this machine; `workspace` defaults to your home folder. Sessions go into the Omnigent
   project (sidebar folder) named by `project`, "X Bookmarks" by default, created on the first Go; `project = ""` for none.
   The session id is shown on the card page under "Launched".
 - `command`: pipe the brief to a program you name (an argv list, detached). This is how any other agent runs your tasks.

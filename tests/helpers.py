@@ -93,7 +93,7 @@ class Recorder(BaseHTTPRequestHandler):
         self.end_headers()
         self.wfile.write(raw)
 
-    do_GET = do_POST = _handle
+    do_GET = do_POST = do_DELETE = _handle
 
 
 @contextlib.contextmanager

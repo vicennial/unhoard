@@ -24,8 +24,12 @@ def omnigent(handler, body):
         return 200, AGENTS
     if handler.path == "/v1/projects":
         return 200, {"data": [{"id": "proj_1", "name": "X Bookmarks"}]}
+    if handler.path == "/v1/hosts":
+        return 200, {"hosts": [{"host_id": "host_1", "name": "this-box", "status": "online"}]}
     if handler.path == "/v1/sessions":
         return 200, {"session_id": "sess_1"}
+    if handler.path == "/v1/sessions/sess_1/events":
+        return 200, {"queued": True}
     return 404, {}
 
 
@@ -89,7 +93,8 @@ class AutoLauncherTests(helpers.TempCase):
             with helpers.fake_http(omnigent) as (base, reqs):
                 out = launch.make_launcher(self.cfg(base))(CARD, "a note")
             self.assertEqual((out["ref"], out["status"], out["target"]), ("sess_1", "started", "omnigent"))
-            self.assertEqual([r["path"] for r in reqs if r["method"] == "POST"], ["/v1/sessions"])
+            self.assertEqual([r["path"] for r in reqs if r["method"] == "POST"],
+                             ["/v1/sessions", "/v1/sessions/sess_1/events"])
             # the same Config, but the server is gone now: with an agent chosen and no word from the page, a
             # silent print would consume the card, so it is an error and the card goes back to the queue
             with self.assertRaisesRegex(launch.LaunchError, "does not answer"):

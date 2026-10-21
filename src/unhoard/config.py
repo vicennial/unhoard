@@ -349,8 +349,9 @@ agent_id = ""
 # Omnigent project (a folder in the sidebar) for launched sessions; created on the first Go.
 # Empty: no project.
 project = "X Bookmarks"
+# The machine the session runs on. Empty: the one online host, or with several the one named like this machine.
 # host_id = ""        # curl {{api}}/v1/hosts
-# workspace = ""      # absolute path on that host
+# workspace = ""      # absolute path on that host; empty: your home folder (needed for a remote server)
 # harness = ""        # for example "claude-sdk" (overrides the agent default)
 # model = ""
 # reasoning_effort = ""

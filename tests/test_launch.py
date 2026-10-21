@@ -96,28 +96,90 @@ class BriefTests(unittest.TestCase):
         self.assertIn("unknown", brief)
 
 
+HOST = {"host_id": "host_1", "name": "this-box", "status": "online"}
+
+
+def with_hosts(responder, hosts=(HOST,)):
+    """An Omnigent fake that lists ``hosts`` and queues events; other paths go to ``responder``."""
+    def handle(handler, body):
+        if handler.path == "/v1/hosts":
+            return 200, {"hosts": list(hosts)}
+        if handler.path.endswith("/events"):
+            return 200, {"queued": True, "pending_id": "pending_1"}
+        return responder(handler, body)
+    return handle
+
+
 class OmnigentLauncherTests(unittest.TestCase):
     def launcher(self, base, **over):
         return OmnigentLauncher({"api": base, "agent_id": "ag_test", **over}, timeout=5)
 
-    def test_posts_a_session_with_the_brief_as_first_message(self):
-        with helpers.fake_http(lambda h, b: (200, {"session_id": "conv_123"})) as (base, reqs):
-            out = self.launcher(base, host_id="host_1", workspace="/work/repo", harness="claude-sdk", model="m-1",
+    def test_posts_a_session_then_the_brief_as_its_first_message(self):
+        with helpers.fake_http(with_hosts(lambda h, b: (200, {"session_id": "conv_123"}))) as (base, reqs):
+            out = self.launcher(base, host_id="host_9", workspace="/work/repo", harness="claude-sdk", model="m-1",
                                 reasoning_effort="high")(CARD, "my note")
         self.assertEqual(out, {"ref": "conv_123", "status": "started", "target": "omnigent"})
-        req = reqs[0]
-        self.assertEqual((req["method"], req["path"]), ("POST", "/v1/sessions"))
-        body = json.loads(req["body"])
+        self.assertEqual([(r["method"], r["path"]) for r in reqs],
+                         [("POST", "/v1/sessions"), ("POST", "/v1/sessions/conv_123/events")])  # no host lookup
+        body = json.loads(reqs[0]["body"])
         self.assertEqual((body["agent_id"], body["host_id"], body["workspace"], body["harness_override"],
                           body["model_override"], body["reasoning_effort"]),
-                         ("ag_test", "host_1", "/work/repo", "claude-sdk", "m-1", "high"))
+                         ("ag_test", "host_9", "/work/repo", "claude-sdk", "m-1", "high"))
         self.assertEqual(body["title"], "Draft a caching plan")
-        item = body["initial_items"][0]
+        # given at create time, a first message is only history while the host starts the agent: no turn runs
+        self.assertNotIn("initial_items", body)
+        item = json.loads(reqs[1]["body"])
         self.assertEqual((item["type"], item["data"]["role"]), ("message", "user"))
         text = item["data"]["content"][0]
         self.assertEqual(text["type"], "input_text")
         self.assertIn("my note", text["text"])
         self.assertIn("untrusted", text["text"])
+
+    def test_without_a_host_id_the_one_online_host_and_the_home_folder_are_used(self):
+        from pathlib import Path
+        hosts = (HOST, {"host_id": "host_off", "name": "old", "status": "offline"})
+        with helpers.fake_http(with_hosts(lambda h, b: (200, {"session_id": "s"}), hosts)) as (base, reqs):
+            self.launcher(base)(CARD, "")
+        self.assertEqual(reqs[0]["path"], "/v1/hosts")
+        body = json.loads(reqs[1]["body"])
+        self.assertEqual((body["host_id"], body["workspace"]), ("host_1", str(Path.home())))
+
+    def test_with_several_online_hosts_the_one_named_like_this_machine_is_used(self):
+        import socket
+        hosts = ({"host_id": "host_a", "name": "other-box", "status": "online"},
+                 {"host_id": "host_b", "name": socket.gethostname(), "status": "online"})
+        with helpers.fake_http(with_hosts(lambda h, b: (200, {"session_id": "s"}), hosts)) as (base, reqs):
+            self.launcher(base, workspace="/srv/work")(CARD, "")
+        body = json.loads(reqs[1]["body"])
+        self.assertEqual((body["host_id"], body["workspace"]), ("host_b", "/srv/work"))
+
+    def test_no_matching_host_is_a_launch_error_that_names_the_setting_and_creates_nothing(self):
+        two = ({"host_id": "host_a", "name": "a.invalid", "status": "online"},
+               {"host_id": "host_b", "name": "b.invalid", "status": "online"})
+        for hosts in ((), two):
+            with helpers.fake_http(with_hosts(lambda h, b: (200, {"session_id": "s"}), hosts)) as (base, reqs):
+                with self.assertRaisesRegex(LaunchError, r"host_id"):
+                    self.launcher(base)(CARD, "")
+            self.assertEqual([r["path"] for r in reqs], ["/v1/hosts"])
+
+    def test_a_server_without_hosts_gets_no_host(self):
+        def omnigent(handler, body):
+            if handler.path == "/v1/hosts":
+                return 404, {"detail": "Not Found"}
+            return 200, {"session_id": "s"}
+        with helpers.fake_http(omnigent) as (base, reqs):
+            self.launcher(base)(CARD, "")
+        self.assertNotIn("host_id", json.loads(reqs[1]["body"]))
+
+    def test_a_failed_first_message_deletes_the_empty_session(self):
+        def omnigent(handler, body):
+            if handler.path.endswith("/events"):
+                return 503, {"detail": "runner unavailable"}
+            return 200, {"session_id": "s1"}
+        with helpers.fake_http(omnigent) as (base, reqs):
+            with self.assertRaisesRegex(LaunchError, "503"):
+                self.launcher(base, host_id="h", workspace="/w")(CARD, "")
+        self.assertEqual([(r["method"], r["path"]) for r in reqs][-1], ("DELETE", "/v1/sessions/s1"))
 
     def test_a_redirect_is_not_followed(self):
         with helpers.fake_http(lambda h, b: (200, {"session_id": "stolen"})) as (target, target_reqs):
@@ -131,7 +193,7 @@ class OmnigentLauncherTests(unittest.TestCase):
         import os
         from unittest import mock
         with helpers.fake_http(lambda h, b: (200, {"session_id": "proxy"})) as (proxy, proxy_reqs), \
-                helpers.fake_http(lambda h, b: (200, {"session_id": "direct"})) as (base, reqs):
+                helpers.fake_http(with_hosts(lambda h, b: (200, {"session_id": "direct"}))) as (base, reqs):
             with mock.patch.dict(os.environ, {"http_proxy": proxy, "HTTP_PROXY": proxy}):
                 os.environ.pop("no_proxy", None)
                 os.environ.pop("NO_PROXY", None)
@@ -159,8 +221,8 @@ class OmnigentLauncherTests(unittest.TestCase):
 
     def test_optional_fields_are_omitted_when_unset(self):
         with helpers.fake_http(lambda h, b: (200, {"session_id": "s"})) as (base, reqs):
-            self.launcher(base)(CARD, "")
-        self.assertEqual(set(json.loads(reqs[0]["body"])), {"agent_id", "title", "initial_items"})
+            self.launcher(base, host_id="h", workspace="/w")(CARD, "")
+        self.assertEqual(set(json.loads(reqs[0]["body"])), {"agent_id", "title", "host_id", "workspace"})
 
     def test_http_error_raises_with_status(self):
         with helpers.fake_http(lambda h, b: (422, {"detail": "unknown agent"})) as (base, _):
@@ -188,7 +250,7 @@ class OmnigentLauncherTests(unittest.TestCase):
                 return 200, projects[-1]
             return 200, {"session_id": "s%d" % len(projects)}
 
-        with helpers.fake_http(omnigent) as (base, reqs):
+        with helpers.fake_http(with_hosts(omnigent)) as (base, reqs):
             launch = self.launcher(base, project="X Bookmarks")
             launch(CARD, "")
             launch(CARD, "")
@@ -208,9 +270,10 @@ class OmnigentLauncherTests(unittest.TestCase):
                 return 409, {"detail": "exists"}
             return 200, {"session_id": "s"}
 
-        with helpers.fake_http(omnigent) as (base, reqs):
+        with helpers.fake_http(with_hosts(omnigent)) as (base, reqs):
             self.launcher(base, project="X Bookmarks")(CARD, "")
-        self.assertEqual(json.loads(reqs[-1]["body"])["project_id"], "proj_9")
+        create = next(r for r in reqs if r["path"] == "/v1/sessions")
+        self.assertEqual(json.loads(create["body"])["project_id"], "proj_9")
 
     def test_default_config_uses_the_x_bookmarks_project(self):
         from unhoard.config import DEFAULTS
