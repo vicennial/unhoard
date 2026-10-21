@@ -4,7 +4,7 @@ build-backend = "setuptools.build_meta"
 
 [project]
 name = "unhoard"
-version = "0.1.2"
+dynamic = ["version"]  # from unhoard.__version__; see RELEASING.md
 description = "Your X (Twitter) bookmarks aren't a graveyard anymore: your AI agent (Claude Code, Codex, Omnigent or any CLI) reads each one, works out why you saved it, and writes a task you start with one click."
 readme = "README.md"
 requires-python = ">=3.11"
@@ -47,6 +47,9 @@ unhoard = "unhoard.cli:main"
 # unhoard_ext package: it is the only code that imports omnigent, so the core stays stdlib-only.
 [project.entry-points."omnigent.extensions"]
 unhoard = "unhoard_ext.plugin:get_manifest"
+
+[tool.setuptools.dynamic]
+version = { attr = "unhoard.__version__" }
 
 [tool.setuptools.packages.find]
 where = ["src"]

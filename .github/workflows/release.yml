@@ -1,0 +1,82 @@
+name: Release
+
+# Push a tag vX.Y.Z on a commit whose unhoard.__version__ is X.Y.Z and whose CHANGELOG.md has a "## [X.Y.Z]"
+# section. This tests, builds, publishes to PyPI (Trusted Publishing, no token) and makes the GitHub Release.
+# See RELEASING.md.
+on:
+  push:
+    tags: ["v*"]
+
+permissions: {}
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+    outputs:
+      version: ${{ steps.version.outputs.version }}
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.13"
+      - name: The tag, the version and the changelog agree
+        id: version
+        run: |
+          version=$(PYTHONPATH=src python -c 'import unhoard; print(unhoard.__version__)')
+          test "v$version" = "$GITHUB_REF_NAME" || { echo "tag $GITHUB_REF_NAME but version $version"; exit 1; }
+          python .github/scripts/release_notes.py "$version" > release-notes.md
+          echo "version=$version" >> "$GITHUB_OUTPUT"
+      - name: Tests
+        run: python -m unittest discover -s tests -t tests
+      - name: Build and check
+        run: |
+          python -m pip install --quiet build twine
+          python -m build
+          python -m twine check --strict dist/*
+      - uses: actions/upload-artifact@v4
+        with:
+          name: release
+          path: |
+            dist/
+            release-notes.md
+
+  pypi:
+    needs: build
+    runs-on: ubuntu-latest
+    environment: pypi
+    permissions:
+      id-token: write
+    steps:
+      - uses: actions/download-artifact@v4
+        with:
+          name: release
+      - name: Is this version on PyPI already?
+        id: pypi
+        run: |
+          if curl -fsS -o /dev/null "https://pypi.org/pypi/unhoard/${{ needs.build.outputs.version }}/json"; then
+            echo "published=true" >> "$GITHUB_OUTPUT"
+          fi
+      - if: steps.pypi.outputs.published != 'true'
+        uses: pypa/gh-action-pypi-publish@release/v1
+
+  github-release:
+    needs: [build, pypi]
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+    steps:
+      - uses: actions/download-artifact@v4
+        with:
+          name: release
+      - name: Create the GitHub Release
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          if gh release view "$GITHUB_REF_NAME" -R "$GITHUB_REPOSITORY" > /dev/null 2>&1; then
+            echo "release $GITHUB_REF_NAME exists"
+          else
+            gh release create "$GITHUB_REF_NAME" -R "$GITHUB_REPOSITORY" --verify-tag \
+              --title "unhoard ${{ needs.build.outputs.version }}" --notes-file release-notes.md dist/*
+          fi

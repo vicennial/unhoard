@@ -31,3 +31,9 @@ Run the full suite before you hand back a change. `UNHOARD_LIVE=1` also runs a l
   bind.
 - **Demo data is fictional.** Demo handles contain a dot so they can never be real X accounts; demo links use
   example.com.
+- **No one's machine in the repo.** Use placeholders (`mybox.tail1234.ts.net`, `/home/me`); `tests/test_public_tree.py`
+  checks. Settings for one person's setup go in their config, not in defaults.
+
+## Changes and releases
+
+Add a line under "Unreleased" in `CHANGELOG.md` with every change a user would notice. Releases: `RELEASING.md`.

@@ -117,6 +117,15 @@ class PackagingTests(unittest.TestCase):
         self.assertEqual(project["entry-points"]["omnigent.extensions"]["unhoard"],
                          "unhoard_ext.plugin:get_manifest")
 
+    def test_one_version_everywhere(self):
+        # pyproject reads unhoard.__version__; the Omnigent manifest may not import it, so it repeats the string
+        import unhoard
+        self.assertEqual(self.meta["project"]["dynamic"], ["version"])
+        self.assertEqual(self.meta["tool"]["setuptools"]["dynamic"]["version"], {"attr": "unhoard.__version__"})
+        self.assertIn(f'version="{unhoard.__version__}"', (EXT / "plugin.py").read_text())
+        changelog = (helpers.ROOT / "CHANGELOG.md").read_text()
+        self.assertIn(f"## [{unhoard.__version__}]", changelog)  # every release has its changelog section
+
     def test_package_data_files_exist(self):
         for package, patterns in self.meta["tool"]["setuptools"]["package-data"].items():
             for pattern in patterns:
