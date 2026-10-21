@@ -4,6 +4,7 @@ from __future__ import annotations
 import datetime as dt
 import os
 import sqlite3
+import time
 from pathlib import Path
 
 from .config import Paths, resolve_paths
@@ -127,6 +128,24 @@ def timestamp(when: dt.datetime | None = None) -> str:
     return when.astimezone(dt.timezone.utc).strftime("%Y-%m-%dT%H:%M:%SZ")
 
 
+def _set_up(db: sqlite3.Connection, seconds: float = 10.0) -> None:
+    """WAL, schema and migration. Switching to WAL can fail at once with "database is locked" while another process
+    opens the same new file (SQLite does not always wait for that lock), so a locked start is retried."""
+    end = time.monotonic() + seconds
+    while True:
+        try:
+            db.execute("PRAGMA journal_mode=WAL")
+            db.executescript(SCHEMA)
+            migrate(db)
+            return
+        except sqlite3.OperationalError as exc:
+            if "locked" not in str(exc) or time.monotonic() > end:
+                raise
+            if db.in_transaction:
+                db.rollback()
+            time.sleep(0.05)
+
+
 def connect(paths: Paths | Path | str | None = None) -> sqlite3.Connection:
     """Open (creating if needed) the database. Accepts Paths, or a file path for tests."""
     if paths is None:
@@ -138,9 +157,7 @@ def connect(paths: Paths | Path | str | None = None) -> sqlite3.Connection:
     db.row_factory = sqlite3.Row
     db.execute("PRAGMA foreign_keys=ON")
     db.execute("PRAGMA busy_timeout=5000")
-    db.execute("PRAGMA journal_mode=WAL")
-    db.executescript(SCHEMA)
-    migrate(db)
+    _set_up(db)
     if fresh:
         try:
             os.chmod(db_file, 0o600)  # bookmarks are private reading history

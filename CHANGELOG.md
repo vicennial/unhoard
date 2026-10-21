@@ -16,6 +16,8 @@ All notable changes to unhoard are listed here. The format follows
   the queue.
 - On macOS, `unhoard setup` and `context discover` no longer list the notes folder twice (`~/notes` and `~/Notes` are
   one folder there).
+- Two unhoard processes starting at the same moment (for example the page and a scheduled sync) no longer fail
+  with "database is locked" while the database is set up.
 
 ### Changed
 - Without `[omnigent] host_id`, Go uses the one online Omnigent host, or with several the one named like this
