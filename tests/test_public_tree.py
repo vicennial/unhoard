@@ -14,7 +14,7 @@ HOME_PATH = re.compile(r"(?:/home|/Users)/([A-Za-z0-9._-]+)")
 TAILSCALE_IP = re.compile(r"\b100\.(6[4-9]|[7-9][0-9]|1[01][0-9]|12[0-7])\.\d{1,3}\.\d{1,3}\b")  # 100.64.0.0/10
 PLACEHOLDER_TAILNETS = {"tail1234"}
 PLACEHOLDER_USERS = {"me", "you", "user", "alice", "runner"}
-PLACEHOLDER_ADDRESSES = {"100.64.0.1"}
+PLACEHOLDER_ADDRESSES = {"100.64.0.0", "100.64.0.1"}
 
 
 def tracked_files():

@@ -14,6 +14,8 @@ All notable changes to unhoard are listed here. The format follows
   its history without starting a turn. Go now binds the session to a host and sends the brief as its first message,
   as the Omnigent app does. If that message cannot be sent, the empty session is deleted and the card goes back to
   the queue.
+- On macOS, `unhoard setup` and `context discover` no longer list the notes folder twice (`~/notes` and `~/Notes` are
+  one folder there).
 
 ### Changed
 - Without `[omnigent] host_id`, Go uses the one online Omnigent host, or with several the one named like this

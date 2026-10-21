@@ -18,8 +18,14 @@ def alive(pid):
     # a killed orphan can linger as a zombie until its new parent reaps it
     try:
         return Path(f"/proc/{pid}/stat").read_text().split(")")[-1].split()[0] != "Z"
+    except FileNotFoundError:
+        if Path("/proc/self").exists():
+            return False  # gone between the two checks
     except OSError:
         return False
+    # no /proc (macOS): ask ps for the state
+    state = subprocess.run(["ps", "-o", "stat=", "-p", str(pid)], capture_output=True, text=True).stdout.strip()
+    return bool(state) and not state.startswith("Z")
 
 
 def wait_dead(pid, seconds=5.0):

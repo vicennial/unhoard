@@ -213,6 +213,21 @@ def _walk(home: Path, seconds: float, boundary: Boundary | None = None) -> tuple
     return vaults, graphs, repos, stopped
 
 
+def _distinct_folders(paths: list[Path]) -> list[Path]:
+    """Resolved paths without repeats; also one folder reached by two names (~/notes and ~/Notes on macOS)."""
+    seen: set[tuple[int, int]] = set()
+    out: list[Path] = []
+    for path in paths:
+        try:
+            st = path.stat()
+        except OSError:
+            continue
+        if (st.st_dev, st.st_ino) not in seen:
+            seen.add((st.st_dev, st.st_ino))
+            out.append(path.resolve())
+    return out
+
+
 def discover(home: Path | None = None, env: Mapping[str, str] | None = None, git_email: str | None = None,
              walk_seconds: float = WALK_SECONDS, git_seconds: float = GIT_SECONDS) -> Discovery:
     """Look around ``home``. Fast by design: a time-boxed walk and a handful of ``git log`` calls."""
@@ -234,7 +249,7 @@ def discover(home: Path | None = None, env: Mapping[str, str] | None = None, git
     icloud = home / "Library" / "Mobile Documents" / "iCloud~md~obsidian" / "Documents"
     if icloud.is_dir():
         notes += [d for d in sorted(icloud.iterdir()) if (d / ".obsidian").is_dir()]
-    notes = list(dict.fromkeys(n.resolve() for n in notes))[:MAX_NOTES]
+    notes = _distinct_folders(notes)[:MAX_NOTES]
 
     out.memory_folders = [_tilde(p, home) for p in memory]
     out.notes_folders = [_tilde(p, home) for p in notes]

@@ -65,6 +65,12 @@ class DiscoveryTests(DiscoveryCase):
         self.assertEqual(found.mcp_servers, ["gbrain", "memory"])
         self.assertEqual(found.mcp_not_used, ["exa"])
 
+    def test_one_folder_reached_by_two_names_is_listed_once(self):
+        # on macOS ~/notes and ~/Notes are one folder; a link stands in for that here
+        (self.home / "notes-link").symlink_to(self.home / "notes")
+        paths = [self.home / "notes", self.home / "notes-link", self.home / "missing"]
+        self.assertEqual(discover._distinct_folders(paths), [(self.home / "notes").resolve()])
+
     def test_skips_node_modules_hidden_trees_and_deep_folders(self):
         found = " ".join(self.run_discover().notes_folders)
         for bad in ("node_modules", ".hidden", "/e"):
