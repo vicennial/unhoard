@@ -1,10 +1,10 @@
 """Adapter that starts an Omnigent session through the server's REST API."""
 from __future__ import annotations
 
-import contextlib
 import http.client
 import json
 import socket
+import time
 import urllib.error
 import urllib.request
 from pathlib import Path
@@ -14,6 +14,8 @@ from .brief import render_brief
 
 
 DEFAULT_WORKSPACE = "unhoard-tasks"  # in the home folder, when the host is this machine
+CLEANUP_RETRIES = 2
+CLEANUP_BACKOFF = 0.5  # seconds before retrying DELETE on an empty session
 
 
 def user_message(text: str) -> dict:
@@ -23,9 +25,12 @@ def user_message(text: str) -> dict:
 class OmnigentLauncher:
     """POST {api}/v1/sessions with an already-registered ``agent_id`` and the brief as first message."""
 
-    def __init__(self, config: dict, timeout: int = 60):
+    def __init__(self, config: dict, timeout: int = 60, cleanup_retries: int = CLEANUP_RETRIES,
+                 cleanup_backoff: float = CLEANUP_BACKOFF):
         self.config = dict(config)
         self.timeout = timeout
+        self.cleanup_retries = max(0, int(cleanup_retries))
+        self.cleanup_backoff = max(0.0, float(cleanup_backoff))
 
     def request_body(self, card: dict, note: str) -> dict:
         from . import LaunchError
@@ -53,7 +58,11 @@ class OmnigentLauncher:
             with opener.open(req, timeout=self.timeout) as resp:
                 return json.loads(resp.read() or b"{}")
         except urllib.error.HTTPError as exc:
-            err = LaunchError(f"Omnigent returned HTTP {exc.code}: {exc.read()[:300].decode('utf-8', 'replace')}")
+            try:
+                detail = exc.read()[:300].decode("utf-8", "replace")
+            finally:
+                exc.close()
+            err = LaunchError(f"Omnigent returned HTTP {exc.code}: {detail}")
             err.status = exc.code
             raise err from exc
         except (OSError, json.JSONDecodeError, http.client.HTTPException) as exc:  # OSError covers URLError and resets
@@ -115,6 +124,20 @@ class OmnigentLauncher:
             folder.mkdir(exist_ok=True)
             body["workspace"] = str(folder)
 
+    def _delete_session(self, api: str, session_id: str) -> bool:
+        """Delete an empty session after a failed first message; retry briefly across transient restarts."""
+        from . import LaunchError
+        for attempt in range(self.cleanup_retries + 1):
+            try:
+                self._call(api, "DELETE", f"/v1/sessions/{session_id}")
+                return True
+            except LaunchError as exc:
+                if getattr(exc, "status", None) == 404:
+                    return True
+                if attempt < self.cleanup_retries and self.cleanup_backoff > 0:
+                    time.sleep(self.cleanup_backoff * (attempt + 1))
+        return False
+
     def __call__(self, card: dict, note: str = "") -> dict:
         from . import LaunchError
         api = str(self.config.get("api") or "http://127.0.0.1:6767").rstrip("/")
@@ -131,8 +154,13 @@ class OmnigentLauncher:
         # create time it is kept as history only while the host is still starting the agent, and no turn runs.
         try:
             self._call(api, "POST", f"/v1/sessions/{session_id}/events", user_message(render_brief(card, note)))
-        except LaunchError:
-            with contextlib.suppress(LaunchError):  # no empty session is left behind; the card goes back
-                self._call(api, "DELETE", f"/v1/sessions/{session_id}")
+        except LaunchError as exc:
+            if not self._delete_session(api, str(session_id)):
+                err = LaunchError(
+                    f"{exc}; empty session {session_id} could not be deleted — remove it in Omnigent if it remains"
+                )
+                if hasattr(exc, "status"):
+                    err.status = exc.status
+                raise err from exc
             raise
         return {"ref": str(session_id), "status": "started", "target": "omnigent"}

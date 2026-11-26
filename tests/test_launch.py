@@ -207,9 +207,62 @@ class OmnigentLauncherTests(unittest.TestCase):
                 return 503, {"detail": "runner unavailable"}
             return 200, {"session_id": "s1"}
         with helpers.fake_http(omnigent) as (base, reqs):
-            with self.assertRaisesRegex(LaunchError, "503"):
+            with self.assertRaisesRegex(LaunchError, "503") as ctx:
                 self.launcher(base, host_id="h", workspace="/w")(CARD, "")
+        self.assertNotIn("could not be deleted", str(ctx.exception))
         self.assertEqual([(r["method"], r["path"]) for r in reqs][-1], ("DELETE", "/v1/sessions/s1"))
+
+    def test_cleanup_delete_retries_transient_failure_without_reporting_orphan(self):
+        deletes = {"n": 0}
+
+        def omnigent(handler, body):
+            if handler.path.endswith("/events"):
+                return 502, {"detail": "restarting"}
+            if handler.command == "DELETE":
+                deletes["n"] += 1
+                if deletes["n"] == 1:
+                    return 503, {"detail": "still restarting"}
+                return 200, {"deleted": True}
+            return 200, {"session_id": "s_retry"}
+
+        with helpers.fake_http(omnigent) as (base, reqs):
+            launcher = OmnigentLauncher(
+                {"api": base, "agent_id": "ag_test", "host_id": "h", "workspace": "/w"},
+                cleanup_retries=2,
+                cleanup_backoff=0.0,
+            )
+            with self.assertRaisesRegex(LaunchError, "502") as ctx:
+                launcher(CARD, "")
+        self.assertNotIn("could not be deleted", str(ctx.exception))
+        self.assertEqual(deletes["n"], 2)
+        self.assertEqual(
+            [(r["method"], r["path"]) for r in reqs if r["method"] == "DELETE"],
+            [("DELETE", "/v1/sessions/s_retry"), ("DELETE", "/v1/sessions/s_retry")],
+        )
+
+    def test_failed_cleanup_delete_reports_the_orphaned_session_id(self):
+        deletes = {"n": 0}
+
+        def omnigent(handler, body):
+            if handler.path.endswith("/events"):
+                return 502, {"detail": "server down"}
+            if handler.command == "DELETE":
+                deletes["n"] += 1
+                return 502, {"detail": "still down"}
+            return 200, {"session_id": "s_orphan"}
+
+        with helpers.fake_http(omnigent) as (base, reqs):
+            launcher = OmnigentLauncher(
+                {"api": base, "agent_id": "ag_test", "host_id": "h", "workspace": "/w"},
+                cleanup_retries=2,
+                cleanup_backoff=0.0,
+            )
+            with self.assertRaises(LaunchError) as ctx:
+                launcher(CARD, "")
+        self.assertEqual(deletes["n"], 3)
+        self.assertEqual(getattr(ctx.exception, "status", None), 502)
+        self.assertIn("s_orphan", str(ctx.exception))
+        self.assertIn("could not be deleted", str(ctx.exception))
 
     def test_a_redirect_is_not_followed(self):
         with helpers.fake_http(lambda h, b: (200, {"session_id": "stolen"})) as (target, target_reqs):
