@@ -7,6 +7,13 @@ All notable changes to unhoard are listed here. The format follows
 
 ## [Unreleased]
 
+## [0.1.3] - 2026-11-26
+
+### Fixed
+- When sending the first message to a newly created Omnigent session fails (for example during a brief server
+  restart), `unhoard` now retries the cleanup `DELETE` request instead of giving up immediately, and reports the
+  created session id in the error message if the empty session still cannot be deleted.
+
 ## [0.1.2] - 2026-10-21
 
 ### Fixed
@@ -44,7 +51,8 @@ First release: your agent turns saved X bookmarks into a short queue of tasks, a
   command you choose, or shows it.
 - `uvx unhoard try` shows the page with fictional sample cards and touches none of your data.
 
-[Unreleased]: https://github.com/vicennial/unhoard/compare/v0.1.2...HEAD
+[Unreleased]: https://github.com/vicennial/unhoard/compare/v0.1.3...HEAD
+[0.1.3]: https://github.com/vicennial/unhoard/compare/v0.1.2...v0.1.3
 [0.1.2]: https://github.com/vicennial/unhoard/compare/v0.1.1...v0.1.2
 [0.1.1]: https://github.com/vicennial/unhoard/compare/v0.1.0...v0.1.1
 [0.1.0]: https://github.com/vicennial/unhoard/releases/tag/v0.1.0
